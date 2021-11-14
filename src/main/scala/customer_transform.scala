@@ -1,6 +1,6 @@
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{col, udf, split}
+import org.apache.spark.sql.functions.{col, split, udf}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 object customer_transform extends App {
@@ -34,7 +34,6 @@ object customer_transform extends App {
 
   val addAddressAndPhoneUDF = udf(getContactDetails)
   val customerDF = processInputRecords(customerContactDF,addAddressAndPhoneUDF)
-  customerDF.show(false)
 
   def getContactDetails: String => String = (inputContact:String) =>{
     val hasChars: String = ".*[a-zA-Z]+.*"
@@ -53,6 +52,7 @@ object customer_transform extends App {
       .withColumn("Address",split(col("AddressAndPhone"),";").getItem(0))
       .withColumn("phone",split(col("AddressAndPhone"),";").getItem(1))
       .drop("AddressAndPhone")
+      .drop("cust_contact")
   }
 
   def joinOnKey(df1:DataFrame)(joinOnKey:String)(df2:DataFrame)={
