@@ -20,11 +20,21 @@ object customer_transform extends App {
     .option("header", true)
     .load("D:\\med_item_hdr\\cust_contact.csv")
 
-  customerContactDF.show(false)
+  val customerImpressionDF = spark.read
+    .option("inferSchema",true)
+    .format("csv")
+    .option("header",true)
+    .load("D:\\med_item_hdr\\cust_impression.csv")
+
+  val productDF = spark.read
+    .option("inferSchema",true)
+    .format("csv")
+    .option("header",true)
+    .load("D:\\med_item_hdr\\product_id.csv")
 
   val addAddressAndPhoneUDF = udf(getContactDetails)
-  val finalDF = processInputRecords(customerContactDF,addAddressAndPhoneUDF)
-  finalDF.show(false)
+  val customerDF = processInputRecords(customerContactDF,addAddressAndPhoneUDF)
+  customerDF.show(false)
 
   def getContactDetails: String => String = (inputContact:String) =>{
     val hasChars: String = ".*[a-zA-Z]+.*"
@@ -44,5 +54,27 @@ object customer_transform extends App {
       .withColumn("phone",split(col("AddressAndPhone"),";").getItem(1))
       .drop("AddressAndPhone")
   }
+
+  def joinOnKey(df1:DataFrame)(joinOnKey:String)(df2:DataFrame)={
+    df2.join(df1,Seq(joinOnKey),"left")
+  }
+
+  def joinOnKey2(df1:DataFrame,joinOnKey:String,df2:DataFrame)={
+    df2.join(df1,Seq(joinOnKey),"left")
+  }
+
+  def getCustomerContact:DataFrame=> DataFrame = joinOnKey(customerDF)("cust_id")(_)
+
+  getCustomerContact(customerImpressionDF).show(false)
+
+  val getProductInfo = joinOnKey(customerImpressionDF)("product_id")(productDF)
+
+  getProductInfo.show(false)
+
+  def getCustomerContactCurried = (joinOnKey2 _).curried
+
+  def C1 = getCustomerContactCurried(customerImpressionDF)("product_id")(_)
+
+  C1(productDF).show(false)
 
 }
